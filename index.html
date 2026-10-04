@@ -10,7 +10,7 @@
 .it{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:8px 0;cursor:pointer}.card .it{background:var(--p2)}
 .grow{flex:1;min-width:0}.nm{font-weight:600}.mt{color:var(--mt);font-size:14px;overflow-wrap:anywhere}
 .tg{font-size:12.5px;padding:4px 10px;border-radius:999px;white-space:nowrap;border:1px solid}.tg.ok{color:var(--ok)}.tg.in{color:var(--ce)}.tg.wn{color:var(--wn)}.tg.er{color:var(--er)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.stats div{background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:10px;text-align:center;color:var(--mt);font-size:13px}.stats b{display:block;font-size:24px;color:var(--tx)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.stats div{background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:10px;text-align:center;color:var(--mt);font-size:13px}.stats b{display:block;font-size:24px;color:var(--tx)}
 input,select{width:100%;background:var(--p2);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:11px 12px;font:inherit;margin:6px 0 10px}label{font-size:13px;color:var(--mt)}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;justify-content:center;z-index:9}#ov.on{display:flex}
 #md{background:var(--p);border:1px solid var(--bd);border-radius:20px 20px 0 0;padding:18px;width:100%;max-width:640px;max-height:90vh;overflow:auto}#md h2{margin-bottom:6px}
@@ -22,7 +22,7 @@ input,select{width:100%;background:var(--p2);color:var(--tx);border:1px solid va
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import{getFirestore,collection,getDocs,getDoc,setDoc,updateDoc,doc,runTransaction,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getFirestore,collection,getDocs,getDoc,setDoc,updateDoc,deleteDoc,doc,runTransaction,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBIUEHtcuhPv3EmohKJtZ2FXsm6OsNQscY",authDomain:"rutacobrord.firebaseapp.com",projectId:"rutacobrord",storageBucket:"rutacobrord.firebasestorage.app",messagingSenderId:"626570456246",appId:"1:626570456246:web:6931e4e3f320c15e378a17"});
 const auth=getAuth(app),fs=getFirestore(app),ADMIN="danielquezada905@gmail.com",D=864e5;
 const $=s=>document.querySelector(s),pad=n=>String(n).padStart(2,"0"),rd=n=>"RD$"+(+n||0).toLocaleString("es-DO");
@@ -31,8 +31,9 @@ const fd=t=>{const d=new Date(t);return pad(d.getDate())+"/"+pad(d.getMonth()+1)
 const openModal=h=>{$("#md").innerHTML=h;$("#ov").classList.add("on")},closeModal=()=>$("#ov").classList.remove("on");
 const toast=m=>{const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)};
 document.addEventListener("click",e=>{if(e.target.closest("[data-close]")||e.target.id==="ov")closeModal()});
-let U=[],P=[],M=[],C={},tab="s",q="";
-async function load(){const[a,b,c,m]=await Promise.all([getDocs(collection(fs,"users")),getDocs(collection(fs,"pagos")),getDoc(doc(fs,"config","app")),getDocs(collection(fs,"mensajes"))]);
+let U=[],P=[],M=[],PN={},C={},tab="s",q="";
+async function load(){const[a,b,c,m,pn]=await Promise.all([getDocs(collection(fs,"users")),getDocs(collection(fs,"pagos")),getDoc(doc(fs,"config","app")),getDocs(collection(fs,"mensajes")),getDocs(collection(fs,"pendientes"))]);
+ PN={};pn.docs.forEach(d=>{const x=d.data();PN[d.id]={...x,sentAt:ms(x.sentAt)}});
  M=m.docs.map(d=>{const x=d.data();return{id:d.id,...x,createdAt:ms(x.createdAt),repliedAt:ms(x.repliedAt)}}).sort((a,b)=>b.createdAt-a.createdAt);
  U=a.docs.map(d=>{const x=d.data();return{id:d.id,...x,createdAt:ms(x.createdAt),paidUntil:ms(x.paidUntil),exemptUntil:ms(x.exemptUntil)}});
  P=b.docs.map(d=>{const x=d.data();return{id:d.id,...x,date:ms(x.date),until:ms(x.until)}}).sort((a,b)=>b.date-a.date);C=c.exists()?c.data():{}}
@@ -60,7 +61,8 @@ const row=x=>`<div class="it" data-u="${x.u.id}"><div class="grow"><div class="n
 function vS(){const L=U.map(u=>({u,s:st(u)})),cnt=k=>L.filter(x=>k.includes(x.s.k)).length,
  soon=L.filter(x=>(["pd","gr"].includes(x.s.k)&&x.s.d<=7)||(x.s.k==="tr"&&x.s.d<=3)),
  s=q.trim().toLowerCase(),f=L.filter(x=>!s||[x.u.name,x.u.email,x.u.code].join(" ").toLowerCase().includes(s)).sort((a,b)=>b.u.createdAt-a.u.createdAt);
- return`<div class="stats"><div><b>${cnt(["pd","ex"])}</b>Activos</div><div><b>${cnt(["tr"])}</b>En prueba</div><div><b>${cnt(["ve","gr","blk"])}</b>Vencidos</div></div>${soon.length?`<div class="card al"><b>Vencen pronto (${soon.length})</b>${soon.map(row).join("")}</div>`:""}<input id="q" placeholder="Buscar por código, nombre o correo" value="${esc(q)}">${f.map(row).join("")||'<p class="mt">Sin resultados</p>'}`}
+ const pend=L.filter(x=>PN[x.u.id]),prow=x=>{const p=PN[x.u.id];return`<div class="it" data-u="${x.u.id}"><div class="grow"><div class="nm">${esc(x.u.name)}</div><div class="mt">${esc(x.u.code)} · ${p.plan==="m"?"Mensual":"Anual"} · ${rd(p.amount)} · ${fd(p.sentAt)}</div></div><span class="tg wn">Por confirmar</span></div>`};
+ return`${pend.length?`<div class="card" style="border-color:var(--wn)"><b>Comprobantes por confirmar (${pend.length})</b>${pend.map(prow).join("")}</div>`:""}<div class="stats"><div><b>${U.length}</b>Registrados</div><div><b>${cnt(["pd","ex"])}</b>Activos</div><div><b>${cnt(["tr"])}</b>En prueba</div><div><b>${cnt(["ve","gr","blk"])}</b>Vencidos</div></div>${soon.length?`<div class="card al"><b>Vencen pronto (${soon.length})</b>${soon.map(row).join("")}</div>`:""}<input id="q" placeholder="Buscar por código, nombre o correo" value="${esc(q)}">${f.map(row).join("")||'<p class="mt">Sin resultados</p>'}`}
 function vP(){const m=new Date(),tot=P.filter(p=>{const d=new Date(p.date);return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear()}).reduce((a,p)=>a+(+p.amount||0),0);
  return`<div class="card"><div class="mt">Ingresos de este mes</div><h1 style="margin:0">${rd(tot)}</h1></div>${P.map(p=>`<div class="it" style="cursor:default"><div class="grow"><div class="nm">#${String(p.receipt).padStart(4,"0")} · ${esc(p.name)}</div><div class="mt">${esc(p.code)} · ${p.plan==="m"?"Mensual":"Anual"} · ${fd(p.date)}${p.note?" · "+esc(p.note):""}</div></div><b>${rd(p.amount)}</b></div>`).join("")||'<p class="mt">Aún no hay pagos</p>'}`}
 function vA(){const b=C.bank||{},f=(id,l,v,t)=>`<label>${l}</label><input id="${id}" ${t||""} value="${esc(v??"")}">`;
@@ -68,15 +70,16 @@ function vA(){const b=C.bank||{},f=(id,l,v,t)=>`<label>${l}</label><input id="${
 async function saveCfg(){try{await setDoc(doc(fs,"config","app"),{bank:{name:$("#cb").value.trim(),holder:$("#ch").value.trim(),type:$("#ct").value.trim(),number:$("#cn").value.trim()},whatsapp:$("#cw").value.replace(/\D/g,""),priceMonthly:+$("#pm").value||500,priceYearly:+$("#py").value||4800},{merge:true});await load();render();toast("Ajustes guardados")}catch(e){toast("Error: "+(e.code||e.message))}}
 async function upd(id,data){try{await updateDoc(doc(fs,"users",id),data);await load();closeModal();render();toast("Guardado")}catch(e){toast("Error: "+(e.code||e.message))}}
 function userModal(id){const u=U.find(x=>x.id===id),s=st(u);
- openModal(`<h2>${esc(u.name)}</h2><p class="mt">${esc(u.code)} · ${esc(u.email)}</p><p style="margin-top:8px">${s.l}</p><p class="mt">Precio: mensual ${rd(price(u,"m"))} · anual ${rd(price(u,"y"))}${u.discType?" · descuento "+(u.discType==="pct"?u.discValue+"%":"precio fijo "+rd(u.discValue)):""}</p><div class="ac"><button class="btn" id="a1">+1 mes</button><button class="btn" id="a2">+1 año</button><button class="btn g" id="ex">Exonerar</button><button class="btn g" id="ds">Descuento</button><button class="btn g" id="bl">${u.blocked?"Activar":"Desactivar"}</button><button class="btn g" data-close>Cerrar</button></div>`);
+ openModal(`<h2>${esc(u.name)}</h2><p class="mt">${esc(u.code)} · ${esc(u.email)}</p><p style="margin-top:8px">${s.l}</p>${PN[id]?`<p style="margin-top:8px;color:var(--wn)">Envió comprobante: plan ${PN[id].plan==="m"?"mensual":"anual"}, ${rd(PN[id].amount)}</p>`:""}<p class="mt">Precio: mensual ${rd(price(u,"m"))} · anual ${rd(price(u,"y"))}${u.discType?" · descuento "+(u.discType==="pct"?u.discValue+"%":"precio fijo "+rd(u.discValue)):""}</p><div class="ac"><button class="btn" id="a1">+1 mes</button><button class="btn" id="a2">+1 año</button><button class="btn g" id="ex">Exonerar</button><button class="btn g" id="ds">Descuento</button>${PN[id]?'<button class="btn g" id="qp">Quitar aviso de pago</button>':""}<button class="btn g" id="bl">${u.blocked?"Activar":"Desactivar"}</button><button class="btn g" data-close>Cerrar</button></div>`);
  $("#a1").onclick=()=>payModal(id,"m");$("#a2").onclick=()=>payModal(id,"y");$("#ex").onclick=()=>exModal(id);$("#ds").onclick=()=>dsModal(id);
+ const qp=$("#qp");if(qp)qp.onclick=async()=>{try{await deleteDoc(doc(fs,"pendientes",id));await load();closeModal();render();toast("Aviso quitado")}catch(e){toast("Error: "+(e.code||e.message))}};
  $("#bl").onclick=()=>upd(id,{blocked:!u.blocked})}
 function payModal(id,k){const u=U.find(x=>x.id===id),list=k==="m"?(+C.priceMonthly||500):(+C.priceYearly||4800),pr=price(u,k);
  openModal(`<h2>Confirmar pago</h2><p class="mt">${esc(u.name)} · ${esc(u.code)} · plan ${k==="m"?"mensual":"anual"}</p><label>Monto recibido (RD$)</label><input id="am" type="number" inputmode="decimal" value="${pr}"><label>Nota (opcional)</label><input id="nt"><div class="ac"><button class="btn g" data-close>Cancelar</button><button class="btn" id="ok">Confirmar y activar</button></div>`);
  $("#ok").onclick=async()=>{const amt=+$("#am").value,note=$("#nt").value.trim();if(!(amt>=0)||$("#am").value==="")return toast("Monto inválido");$("#ok").disabled=true;
   try{const n=Date.now(),until=Math.max(n,u.paidUntil||0,u.createdAt+15*D)+(k==="m"?30:365)*D;
    const no=await runTransaction(fs,async tx=>{const cr=doc(fs,"config","app"),c=await tx.get(cr),r=(c.exists()&&c.data().nextReceipt)||1;
-    tx.set(cr,{nextReceipt:r+1},{merge:true});tx.update(doc(fs,"users",id),{paidUntil:new Date(until),blocked:false});
+    tx.set(cr,{nextReceipt:r+1},{merge:true});tx.update(doc(fs,"users",id),{paidUntil:new Date(until),blocked:false});tx.delete(doc(fs,"pendientes",id));
     tx.set(doc(collection(fs,"pagos")),{uid:id,code:u.code,name:u.name,email:u.email,plan:k,price:list,amount:amt,note,receipt:r,until:new Date(until),date:serverTimestamp()});return r});
    await load();render();receipt(k,list,amt,until,no)}catch(e){toast("Error: "+(e.code||e.message));$("#ok").disabled=false}}}
 function receipt(k,list,amt,until,no){const dis=list-amt,txt=`✅ Pago confirmado\nMembresía RutaCobro · plan ${k==="m"?"mensual":"anual"}\nPrecio: ${rd(list)}\n${dis>0?"Descuento: "+rd(dis)+"\n":""}Total pagado: ${rd(amt)}\nVálido hasta: ${fd(until)}\nRecibo #${String(no).padStart(4,"0")}`;
